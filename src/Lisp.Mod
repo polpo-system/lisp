@@ -1,12 +1,12 @@
 MODULE Lisp;
 
-	IMPORT Display, Texts, TextFrames, WriteFrames, MenuViewers, Oberon, Integers;
+	IMPORT Objects, Input, Texts, TextFrames, MenuViewers, Oberon, Integers;
 
 	CONST
 		Version = "Oberon Lisp - gri 24 Jun 91 / 19 Mar 93";
-		Menu = "System.Close  System.Copy  System.Grow  Write.Store  Write.Locate  !Lisp.Reset  Lisp.Eval  ";
+		Menu = "System.Close  System.Copy  System.Grow  Edit.Store  Edit.Locate  Lisp.Reset  Lisp.Eval  ";
 		Char = 0; Name = 1; Int = 2; (* scanner symbols *)
-		MaxArgs = 6; Tick = 300;
+		MaxArgs = 6;
 
 	TYPE
 		List = POINTER TO Desc;
@@ -149,6 +149,11 @@ MODULE Lisp;
 
 (* output *)
 
+	PROCEDURE WriteNumber (x: Integers.Integer);	(* polpo: the decimal digits, Integers of OOC has no Write *)
+		VAR s: POINTER TO ARRAY OF CHAR;
+	BEGIN NEW(s, LEN(x^) * 5 + 4); Integers.ConvertToString(x, s^); Texts.WriteString(W, s^)  (* a word of base 32768 has at most 5 digits *)
+	END WriteNumber;
+
 	PROCEDURE write (x: List);
 		VAR p: Pair; blank: BOOLEAN;
 	BEGIN
@@ -161,7 +166,7 @@ MODULE Lisp;
 			UNTIL (x = NIL) OR ~(x IS Pair);
 			IF x # NIL THEN Texts.WriteString(W, " . "); write(x) END;
 			Texts.Write(W, ")")
-		ELSIF x IS Number THEN Integers.Write(W, x(Number).val)
+		ELSIF x IS Number THEN WriteNumber(x(Number).val)
 		ELSIF x IS Symbol THEN Texts.WriteString(W, x(Symbol).name)
 		ELSIF x IS Local THEN Texts.Write(W, "#"); Texts.WriteInt(W, x(Local).no, 0)
 		ELSIF x IS Lambda THEN
@@ -227,7 +232,7 @@ MODULE Lisp;
 	BEGIN
 		WITH x: Pair DO
 			IF x.cdr = NIL THEN NEW(n);
-				time := Oberon.Time(); h := eval(x.car); n.val := Integers.Long((Oberon.Time() - time) * 1000 DIV Tick); RETURN n
+				time := Oberon.Time(); h := eval(x.car); n.val := Integers.Long((Oberon.Time() - time) * 1000 DIV Input.TimeUnit); RETURN n
 			END
 		END
 	END time;
@@ -478,27 +483,27 @@ MODULE Lisp;
 		IF time >= 0 THEN OpenScanner(S, text, beg); Scan(S); stack := NIL;
 			REPEAT write(eval(read(NIL))); x := writeLn(NIL) UNTIL Texts.Pos(S) >= end
 		END;
-		Oberon.Collect(0)
+		Oberon.Collect
 	END Eval;
 	
-	PROCEDURE Handle (F: Display.Frame; VAR msg: Display.FrameMsg);
+	PROCEDURE Handle (F: Objects.Object; VAR msg: Objects.ObjMsg);
 		VAR org: LONGINT; x: List;
 	BEGIN
-		WITH F: WriteFrames.Frame DO
+		WITH F: TextFrames.Frame DO
 			IF msg IS Oberon.InputMsg THEN
 				WITH msg: Oberon.InputMsg DO
-					IF F.hasCar & (msg.id = Oberon.consume) & (msg.ch = "\") THEN
-						msg.ch := 0DX; org := F.carLoc.org; WriteFrames.Handle(F, msg);
+					IF (F.car # 0) & (msg.id = Oberon.consume) & (msg.ch = "\") THEN
+						msg.ch := 0DX; org := F.carloc.org; TextFrames.Handle(F, msg);
 						OpenScanner(S, F.text, org); Scan(S); stack := NIL;
-						write(eval(read(NIL))); x := writeLn(NIL); Oberon.Collect(0);
-						IF WriteFrames.Pos(F, F.X+F.W, F.Y) < F.text.len THEN WriteFrames.Show(F, org) END;
-						WriteFrames.SetCaret(F, F.text.len);
+						write(eval(read(NIL))); x := writeLn(NIL); Oberon.Collect;
+						IF TextFrames.Pos(F, F.X+F.W, F.Y) < F.text.len THEN TextFrames.Show(F, org) END;
+						TextFrames.SetCaret(F, F.text.len);
 						RETURN
 					END
 				END
 			END
 		END;
-		WriteFrames.Handle(F, msg)		
+		TextFrames.Handle(F, msg)
 	END Handle;
 	
 	PROCEDURE Open*;
@@ -507,7 +512,7 @@ MODULE Lisp;
 		Oberon.AllocateUserViewer(Oberon.Mouse.X, x, y);
 		V := MenuViewers.New(
 			TextFrames.NewMenu("Log.Lisp", Menu),
-			WriteFrames.NewText(Log, 0),
+			TextFrames.NewText(Log, 0),
 			TextFrames.menuH, x, y);
 		V.dsc.next.handle := Handle
 	END Open;
@@ -563,6 +568,6 @@ MODULE Lisp;
 BEGIN Texts.OpenWriter(W);
 	Texts.WriteString(W, Version); Texts.WriteLn(W);
 	Texts.Append(Oberon.Log, W.buf);
-	Log := WriteFrames.Text("");
+	Log := TextFrames.Text("");
 	Reset
 END Lisp.
