@@ -23,7 +23,7 @@ MODULE Integers;
     Vol 2, section 4.3.1
 *)
   
-IMPORT BinaryRider;
+(* polpo: no IMPORT of BinaryRider, which is x86 only; Externalize and Internalize are left out *)
 
 CONST
   B  = 8000H;      (* base (32768) for calculations *)
@@ -555,23 +555,6 @@ VAR
     IF x[0]=negative THEN RETURN -r ELSE RETURN r END
   END Short;
     
-  (***********************************************************)
-  (* Operations to internalize/externalize Integers          *)
-
-  PROCEDURE Externalize* (VAR w: BinaryRider.Writer; x: Integer);
-  VAR i: LONGINT;
-  BEGIN
-    w.WriteNum(LEN(x^));
-    FOR i:=0 TO LEN(x^)-1 DO w.WriteInt(x[i]) END
-  END Externalize;
-  
-  PROCEDURE Internalize* (VAR r: BinaryRider.Reader; VAR x: Integer);
-  VAR i, s: LONGINT;
-  BEGIN
-    r.ReadNum(s); NEW(x, s);
-    FOR i:=0 TO s-1 DO r.ReadInt(x[i]) END  
-  END Internalize;
-  
   (***********************************************************)
   (* Mathematical operations on Integers                     *)
   
