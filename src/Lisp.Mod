@@ -62,7 +62,7 @@ MODULE Lisp;
 
 	VAR
 		W: Texts.Writer;
-		Log: Texts.Text;
+		Log*: Texts.Text;	(* polpo: exported, for EvalText and the test *)
 		S: Scanner;
 		root, t, quot: Symbol; (* special symbols *)
 		subst: ARRAY MaxArgs OF Local; (* parameter substitutes *)
@@ -476,14 +476,20 @@ MODULE Lisp;
 		END
 	END atom;
 	
+	(* polpo: the expressions of T from beg to end evaluated, their values written into Log *)
+	PROCEDURE EvalText* (T: Texts.Text; beg, end: LONGINT);
+		VAR x: List;
+	BEGIN
+		OpenScanner(S, T, beg); Scan(S); stack := NIL;
+		REPEAT write(eval(read(NIL))); x := writeLn(NIL) UNTIL Texts.Pos(S) >= end;
+		Oberon.Collect
+	END EvalText;
+
 	PROCEDURE Eval*;
-		VAR text: Texts.Text; beg, end, time: LONGINT; x: List;
+		VAR text: Texts.Text; beg, end, time: LONGINT;
 	BEGIN
 		Oberon.GetSelection(text, beg, end, time);
-		IF time >= 0 THEN OpenScanner(S, text, beg); Scan(S); stack := NIL;
-			REPEAT write(eval(read(NIL))); x := writeLn(NIL) UNTIL Texts.Pos(S) >= end
-		END;
-		Oberon.Collect
+		IF time >= 0 THEN EvalText(text, beg, end) END
 	END Eval;
 	
 	PROCEDURE Handle (F: Objects.Object; VAR msg: Objects.ObjMsg);
