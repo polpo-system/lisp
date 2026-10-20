@@ -252,7 +252,7 @@ VAR
       IF v[j]#0 THEN            (* perform the following if multiplier#0 *)
         i:=n; k:=0;             (* least significant block of multiplicand *)
         REPEAT
-          t:=u[i]*v[j]+w[i+j+off]+k; (* multiply *)
+          t:=LONG(u[i])*v[j]+w[i+j+off]+k; (* multiply; polpo: widened first, INTEGER*INTEGER is an INTEGER *)
           w[i+j+off]:=SHORT(t MOD B); k:=t DIV B;  (* generate result & carry *)
           DEC(i)
         UNTIL i<=um;
